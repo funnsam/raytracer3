@@ -1,0 +1,3 @@
+[submodule "smolmatrix"]
+	path = smolmatrix
+	url = git@github.com:funnsam/smolmatrix
