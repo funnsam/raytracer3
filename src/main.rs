@@ -1,13 +1,10 @@
 use raytracer3::{*, objects::*};
-use smolmatrix::vector;
+use smolmatrix::*;
 
-const WIDTH: usize = 320;
-const HEIGHT: usize = 256;
+const WIDTH: usize = 426;
+const HEIGHT: usize = 240;
 
 fn main() {
-    println!("P3\n{WIDTH} {HEIGHT}\n255\n");
-
-
     let mut state = State {
         camera: Camera::new(WIDTH, HEIGHT),
         scene: Scene {
@@ -24,12 +21,36 @@ fn main() {
                 ],
             },
         },
+        settings: Settings::default(),
     };
+
+    let path = std::path::Path::new("image.png");
+    let file = std::fs::File::create(path).unwrap();
+    let w = std::io::BufWriter::new(file);
+
+    let mut encoder = png::Encoder::new(w, WIDTH as _, HEIGHT as _);
+    encoder.set_color(png::ColorType::Rgb);
+    encoder.set_depth(png::BitDepth::Eight);
+    encoder.set_source_gamma(png::ScaledFloat::from_scaled(45455));
+    encoder.set_source_gamma(png::ScaledFloat::new(1.0 / 2.2));
+    let source_chromaticities = png::SourceChromaticities::new(
+        (0.31270, 0.32900),
+        (0.64000, 0.33000),
+        (0.30000, 0.60000),
+        (0.15000, 0.06000)
+    );
+    encoder.set_source_chromaticities(source_chromaticities);
+    let mut writer = encoder.write_header().unwrap();
+
+    let mut data = Vec::new();
+    let framing = state.camera.get_framing_info();
 
     for y in 0..HEIGHT {
         for x in 0..WIDTH {
-            let c = state.get_color(x, y);
-            print!("{c}");
+            let c = state.get_color(framing.clone(), x, y).get_rgb();
+            data.extend(&c);
         }
     }
+
+    writer.write_image_data(&data).unwrap();
 }

@@ -27,11 +27,11 @@ impl Object for Sphere {
                 }
             }
 
-            (root > 0.0).then(|| (HitInfo {
+            Some(HitInfo {
                 distance: root,
                 normal: (ray.at(root) - &self.center).unit(),
                 front_face: false,
-            }).correct_normal(ray))
+            }.correct_normal(ray))
         }).flatten()
     }
 }
