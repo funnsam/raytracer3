@@ -5,13 +5,9 @@ pub struct Color(pub Vector<3>);
 impl Color {
     pub fn get_rgb(&self) -> [u8; 3] {
         [
-            (255.0 * self.0[0].min(1.0)).round() as u8,
-            (255.0 * self.0[1].min(1.0)).round() as u8,
-            (255.0 * self.0[2].min(1.0)).round() as u8,/*
             (255.0 * self.0[0].min(1.0).max(0.0).sqrt()).round() as u8,
             (255.0 * self.0[1].min(1.0).max(0.0).sqrt()).round() as u8,
             (255.0 * self.0[2].min(1.0).max(0.0).sqrt()).round() as u8,
-            */
         ]
     }
 }

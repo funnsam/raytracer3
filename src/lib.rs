@@ -2,18 +2,19 @@ use smolmatrix::*;
 
 pub mod color;
 pub mod objects;
+pub mod materials;
 pub mod ray;
 mod utils;
 
 use objects::Object;
 
-pub struct State {
+pub struct State<'a> {
     pub camera: Camera,
-    pub scene: Scene,
+    pub scene: Scene<'a>,
     pub settings: Settings,
 }
 
-impl State {
+impl State<'_> {
     pub fn get_color(&self, framing: FramingInfo, x: usize, y: usize) -> color::Color {
         let mut color = Vector::new_zeroed();
         for _ in 0..self.settings.rays_per_px {
@@ -83,23 +84,57 @@ impl Camera {
     }
 }
 
-pub struct Scene {
-    pub world: objects::list::List,
+pub struct Scene<'a> {
+    pub world: objects::list::List<'a>,
 }
 
-impl Scene {
+impl Scene<'_> {
     fn ray_color(&self, ray: &ray::Ray, depth: usize) -> color::Color {
         if depth == 0 {
             return color::Color(Vector::new_zeroed());
         }
 
-        if let Some(h) = self.world.hit(&ray, 0.0001..f32::INFINITY) {
+        if let Some(hit) = self.world.hit(&ray, 0.0001..f32::INFINITY) {
             // normal
             // return color::Color(h.normal.map_each(|e| *e = 0.5 * (*e + 1.0)));
 
-            let p = ray.at(h.distance);
-            let ray = ray::Ray::new(h.normal, p);
-            return color::Color(self.ray_color(&ray, depth - 1).0 * 0.95);
+            let origin = ray.at(hit.distance);
+
+            /* let lambertian_direction = utils::random_unit_vector() + &h.normal;
+            let lambertian_direction = if lambertian_direction.inner.iter().flatten().any(|c| c.abs() > 1e-6) {
+                lambertian_direction
+            } else {
+                h.normal.clone()
+            };
+
+            let dot = ray.direction().dot(&h.normal);
+            let metallic_direction = ray.direction().clone() - &(h.normal.clone() * 2.0 * dot);
+
+            let direction = lambertian_direction * (1.0 - h.bsdf.metallic) + &(metallic_direction * h.bsdf.metallic); */
+
+            // https://graphicscompendium.com/gamedev/15-pbr
+            use core::f32::consts::PI;
+
+            let l = vector!(3 [0.0, 1.0, 0.0]);
+            let h = (l.clone() + ray.direction()).unit();
+            let n_dot_l = hit.normal.dot(&l);
+            let n_dot_v = hit.normal.dot(ray.direction());
+            let v_dot_h = ray.direction().dot(&h);
+            let h_dot_n = h.dot(&hit.normal);
+
+            let alpha2 = hit.bsdf.roughness * hit.bsdf.roughness;
+            let d = (1.0 / (PI * alpha2)) * h_dot_n.powf(2.0 / alpha2 - 2.0);
+            let g = ((2.0 * h_dot_n * n_dot_v) / v_dot_h).min((2.0 * h_dot_n * n_dot_l) / v_dot_h).min(1.0);
+
+            let f0 = 0.0; // (hit.bsdf.refraction - 1.0) / (n + 1.0);
+            let f = f0 + (1.0 - f0) * (1.0 - v_dot_h).powi(5);
+
+            let r_s = (d * g * f) / (4.0 * n_dot_l * hit.normal.dot(ray.direction()));
+            let direction = r_s * hit.bsdf.metallic + (1.0 - hit.bsdf.metallic) * (1.0 / PI);
+
+            let ray = ray::Ray::new_normalized(direction, origin);
+
+            return color::Color(self.ray_color(&ray, depth - 1).0 * &hit.bsdf.base_color.0);
         }
 
         let a = 0.5 * (ray.direction()[1] + 1.0);
@@ -107,16 +142,30 @@ impl Scene {
     }
 }
 
-pub struct Settings {
-    pub rays_per_px: usize,
-    pub depth: usize,
+macro_rules! settings {
+    { $($pub:vis $field:ident : $type:ty = $dv:expr),* $(,)? } => {
+        pub struct Settings {
+            $($pub $field: $type),*
+        }
+
+        impl Settings {
+            $($pub fn $field(mut self, $field: $type) -> Self {
+                self.$field = $field;
+                self
+            })*
+        }
+
+        impl Default for Settings {
+            fn default() -> Self {
+                Self {
+                    $($field: $dv),*
+                }
+            }
+        }
+    };
 }
 
-impl Default for Settings {
-    fn default() -> Self {
-        Self {
-            rays_per_px: 16,
-            depth: 24,
-        }
-    }
+settings! {
+    pub rays_per_px: usize = 16,
+    pub depth: usize = 8,
 }

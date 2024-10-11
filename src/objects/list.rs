@@ -1,12 +1,12 @@
 use crate::ray::Ray;
 use super::*;
 
-pub struct List {
-    pub objects: Vec<Box<dyn Object>>,
+pub struct List<'a> {
+    pub objects: Vec<&'a dyn Object<'a>>,
 }
 
-impl Object for List {
-    fn hit(&self, ray: &Ray, range: core::ops::Range<f32>) -> Option<HitInfo> {
+impl<'a> Object<'a> for List<'a> {
+    fn hit(&self, ray: &Ray, range: core::ops::Range<f32>) -> Option<HitInfo<'a>> {
         let mut closest = range.end;
 
         self.objects.iter().fold(None, |best, obj| {
