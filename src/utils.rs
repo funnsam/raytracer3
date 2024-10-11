@@ -12,3 +12,8 @@ pub fn random_unit_vector() -> Vector<3> {
         }
     }
 }
+
+pub fn random_hemisphere_vector(n: &Vector<3>) -> Vector<3> {
+    let p = random_unit_vector();
+    if p.dot(n) > 0.0 { p } else { -p }
+}

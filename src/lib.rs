@@ -27,7 +27,7 @@ impl State<'_> {
             let direction = pixel - &self.camera.center;
             let ray = ray::Ray::new_normalized(direction, self.camera.center.clone());
 
-            color += &self.scene.ray_color(&ray, self.settings.depth).0;
+            color += &self.scene.ray_color(&self.settings, &ray, self.settings.depth).0;
         }
 
         color::Color(color / self.settings.rays_per_px as f32)
@@ -89,7 +89,7 @@ pub struct Scene<'a> {
 }
 
 impl Scene<'_> {
-    fn ray_color(&self, ray: &ray::Ray, depth: usize) -> color::Color {
+    fn ray_color(&self, settings: &Settings, ray: &ray::Ray, depth: usize) -> color::Color {
         if depth == 0 {
             return color::Color(Vector::new_zeroed());
         }
@@ -115,26 +115,32 @@ impl Scene<'_> {
             // https://graphicscompendium.com/gamedev/15-pbr
             use core::f32::consts::PI;
 
-            let l = vector!(3 [0.0, 1.0, 0.0]);
-            let h = (l.clone() + ray.direction()).unit();
-            let n_dot_l = hit.normal.dot(&l);
             let n_dot_v = hit.normal.dot(ray.direction());
-            let v_dot_h = ray.direction().dot(&h);
-            let h_dot_n = h.dot(&hit.normal);
+            let alpha = hit.bsdf.roughness * hit.bsdf.roughness;
+            let mut color = Vector::new_zeroed();
 
-            let alpha2 = hit.bsdf.roughness * hit.bsdf.roughness;
-            let d = (1.0 / (PI * alpha2)) * h_dot_n.powf(2.0 / alpha2 - 2.0);
-            let g = ((2.0 * h_dot_n * n_dot_v) / v_dot_h).min((2.0 * h_dot_n * n_dot_l) / v_dot_h).min(1.0);
+            for _ in 0..settings.rays_per_hit {
+                let l = utils::random_hemisphere_vector(&hit.normal);
+                let h = (l.clone() + ray.direction()).unit();
+                let v_dot_h = ray.direction().dot(&h);
+                let h_dot_n = h.dot(&hit.normal);
+                let n_dot_l = hit.normal.dot(&l);
 
-            let f0 = 0.0; // (hit.bsdf.refraction - 1.0) / (n + 1.0);
-            let f = f0 + (1.0 - f0) * (1.0 - v_dot_h).powi(5);
+                let d = (1.0 / (PI * alpha * alpha)) * h_dot_n.powf(2.0 / alpha - 2.0);
+                let g = ((2.0 * h_dot_n * n_dot_v) / v_dot_h).min((2.0 * h_dot_n * n_dot_l) / v_dot_h).min(1.0);
 
-            let r_s = (d * g * f) / (4.0 * n_dot_l * n_dot_v);
-            let direction = r_s * hit.bsdf.metallic + (1.0 - hit.bsdf.metallic) * (1.0 / PI);
+                let f0 = 0.0; // (hit.bsdf.refraction - 1.0) / (n + 1.0);
+                let f = f0 + (1.0 - f0) * (1.0 - v_dot_h).powi(5);
 
-            let ray = ray::Ray::new_normalized(direction, origin);
+                let r_s = (d * g * f) / (4.0 * n_dot_l * n_dot_v);
 
-            return color::Color(self.ray_color(&ray, depth - 1).0 * &hit.bsdf.base_color.0);
+                let ray = ray::Ray::new_normalized(l, origin.clone());
+                color += &(self.ray_color(settings, &ray, depth - 1).0 * r_s);
+            }
+
+            // let direction = r_s * hit.bsdf.metallic + (1.0 - hit.bsdf.metallic) * (1.0 / PI);
+
+            return color::Color(color / settings.rays_per_hit as f32);
         }
 
         let a = 0.5 * (ray.direction()[1] + 1.0);
@@ -167,5 +173,6 @@ macro_rules! settings {
 
 settings! {
     pub rays_per_px: usize = 16,
+    pub rays_per_hit: usize = 2,
     pub depth: usize = 8,
 }
