@@ -129,7 +129,7 @@ impl Scene<'_> {
             let f0 = 0.0; // (hit.bsdf.refraction - 1.0) / (n + 1.0);
             let f = f0 + (1.0 - f0) * (1.0 - v_dot_h).powi(5);
 
-            let r_s = (d * g * f) / (4.0 * n_dot_l * hit.normal.dot(ray.direction()));
+            let r_s = (d * g * f) / (4.0 * n_dot_l * n_dot_v);
             let direction = r_s * hit.bsdf.metallic + (1.0 - hit.bsdf.metallic) * (1.0 / PI);
 
             let ray = ray::Ray::new_normalized(direction, origin);
