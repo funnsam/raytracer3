@@ -11,8 +11,8 @@ fn main() {
         radius: 0.5,
         bsdf: &materials::Bsdf {
             base_color: color::Color(vector!(3 [0.8, 0.8, 0.8])),
-            metallic: 0.5,
-            roughness: 0.5_f32.sqrt(),
+            metallic: 1.0,
+            roughness: 0.0,
             ior: 2.0,
 
             emission: materials::Emission {
@@ -27,7 +27,7 @@ fn main() {
         bsdf: &materials::Bsdf {
             base_color: color::Color(vector!(3 [0.8, 0.6, 0.2])),
             metallic: 0.0,
-            roughness: 0.0,
+            roughness: 0.2,
             ior: 2.0,
 
             emission: materials::Emission {
@@ -41,7 +41,7 @@ fn main() {
         radius: 0.5,
         bsdf: &materials::Bsdf {
             base_color: color::Color(vector!(3 [0.8, 0.8, 0.8])),
-            metallic: 0.5,
+            metallic: 1.0,
             roughness: 1.0,
             ior: 2.0,
 
@@ -52,8 +52,8 @@ fn main() {
         },
     };
     let sphere_4 = objects::sphere::Sphere {
-        center: vector!(3 [0.0, 1.0, 2.0]),
-        radius: 1.0,
+        center: vector!(3 [0.0, 1.0, 1.0]),
+        radius: 0.125,
         bsdf: &materials::Bsdf {
             base_color: color::Color(vector!(3 [1.0, 1.0, 1.0])),
             metallic: 0.0,
@@ -72,7 +72,7 @@ fn main() {
         bsdf: &materials::Bsdf {
             base_color: color::Color(vector!(3 [0.2, 0.5, 0.0])),
             metallic: 0.0,
-            roughness: 0.0,
+            roughness: 1.0,
             ior: 2.0,
 
             emission: materials::Emission {
@@ -95,7 +95,7 @@ fn main() {
                 ],
             },
         },
-        settings: Settings::default().rays_per_px(2).depth(4).rays_per_hit(4),//.rays_per_px(32),
+        settings: Settings::default().rays_per_px(2).depth(8).rays_per_hit(2),//.rays_per_px(32),
     };
 
     let path = std::path::Path::new("image.png");

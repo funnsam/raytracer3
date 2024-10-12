@@ -105,7 +105,7 @@ impl Scene<'_> {
 
             let v = -ray.direction().clone();
             let n_dot_v = hit.normal.dot(&v);
-            let alpha = ((1.0 - hit.bsdf.roughness) * (1.0 - hit.bsdf.roughness)).max(0.01);
+            let alpha = (hit.bsdf.roughness * hit.bsdf.roughness).max(0.01);
             let f0_sqrt = (hit.bsdf.ior - 1.0) / (hit.bsdf.ior + 1.0);
             let f0 = f0_sqrt * f0_sqrt;
 
@@ -116,7 +116,15 @@ impl Scene<'_> {
                 let xi = fastrand::f32();
                 let theta = ((alpha * xi.sqrt()) / (1.0 - xi).sqrt()).atan();
                 let phi = 2.0 * PI * fastrand::f32();
-                let l = (vector!(3 [theta.sin() * phi.cos(), theta.cos(), theta.sin() * phi.sin()]) + &hit.normal).unit();
+                let l = vector!(3 [theta.sin() * phi.cos(), theta.cos(), theta.sin() * phi.sin()]);
+                let ct = hit.normal.cross(ray.direction()).unit();
+                let t = hit.normal.cross(&ct).unit();
+                let m = matrix!(3 x 3
+                    [ct[0], hit.normal[0], t[0]]
+                    [ct[1], hit.normal[1], t[1]]
+                    [ct[2], hit.normal[2], t[2]]
+                );
+                let l = &m * &l;
 
                 let h = (l.clone() + &v).unit();
                 let v_dot_h = v.dot(&h);
@@ -159,6 +167,7 @@ macro_rules! settings {
         }
 
         impl Settings {
+            #[allow(unused)]
             $($pub fn $field(mut self, $field: $type) -> Self {
                 self.$field = $field;
                 self
