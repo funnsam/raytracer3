@@ -6,4 +6,5 @@ edition = "2021"
 [dependencies]
 fastrand = "2.1.1"
 png = "0.17.14"
+rayon = "1.10.0"
 smolmatrix = { version = "0.1.7", path = "smolmatrix" }

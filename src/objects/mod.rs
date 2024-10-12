@@ -6,7 +6,7 @@ pub mod sphere;
 pub mod plane;
 pub mod list;
 
-pub trait Object<'a> {
+pub trait Object<'a>: Sync + Send {
     fn hit(&self, ray: &Ray, range: core::ops::Range<f32>) -> Option<HitInfo<'a>>;
 }
 

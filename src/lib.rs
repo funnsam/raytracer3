@@ -101,35 +101,50 @@ impl Scene<'_> {
             let origin = ray.at(hit.distance);
 
             // https://graphicscompendium.com/gamedev/15-pbr
-            use core::f32::consts::PI;
+            use core::f32::consts::{FRAC_1_PI, PI};
 
-            let n_dot_v = hit.normal.dot(ray.direction());
-            let alpha = (hit.bsdf.roughness * hit.bsdf.roughness).max(0.01);
+            let v = -ray.direction().clone();
+            let n_dot_v = hit.normal.dot(&v);
+            let alpha = ((1.0 - hit.bsdf.roughness) * (1.0 - hit.bsdf.roughness)).max(0.01);
+            let f0_sqrt = (hit.bsdf.ior - 1.0) / (hit.bsdf.ior + 1.0);
+            let f0 = f0_sqrt * f0_sqrt;
+
             let mut specular = Vector::new_zeroed();
+            let mut diffuse = Vector::new_zeroed();
 
             for _ in 0..settings.rays_per_hit {
-                let l = utils::random_hemisphere_vector(&hit.normal);
-                let h = (l.clone() + ray.direction()).unit();
-                let v_dot_h = ray.direction().dot(&h);
+                let xi = fastrand::f32();
+                let theta = ((alpha * xi.sqrt()) / (1.0 - xi).sqrt()).atan();
+                let phi = 2.0 * PI * fastrand::f32();
+                let l = (vector!(3 [theta.sin() * phi.cos(), theta.cos(), theta.sin() * phi.sin()]) + &hit.normal).unit();
+
+                let h = (l.clone() + &v).unit();
+                let v_dot_h = v.dot(&h);
                 let h_dot_n = h.dot(&hit.normal);
                 let n_dot_l = hit.normal.dot(&l);
 
-                let d = (1.0 / (PI * alpha * alpha)) * h_dot_n.powf(2.0 / alpha - 2.0);
-                let g = ((2.0 * h_dot_n * n_dot_v) / v_dot_h).min((2.0 * h_dot_n * n_dot_l) / v_dot_h).min(1.0);
+                let sq = alpha / (h_dot_n * h_dot_n * (alpha * alpha - 1.0) + 1.0);
+                let d = FRAC_1_PI * sq * sq;
 
-                let f0 = 0.0; // (hit.bsdf.refraction - 1.0) / (n + 1.0);
+                let g1 = |x_dot_n: f32| 2.0 / (1.0 + (1.0 + alpha * alpha * ((1.0 * x_dot_n * x_dot_n) / (x_dot_n * x_dot_n))).sqrt());
+                let g = g1(n_dot_v) * g1(n_dot_l);
+
                 let f = f0 + (1.0 - f0) * (1.0 - v_dot_h).powi(5);
 
                 let r_s = (d * g * f) / (4.0 * n_dot_l * n_dot_v).max(0.001);
 
                 let ray = ray::Ray::new_normalized(l, origin.clone());
-                specular += &(self.ray_color(settings, &ray, depth - 1).0 * r_s * n_dot_l);
+                let c = self.ray_color(settings, &ray, depth - 1).0;
+                diffuse += &(c.clone() * n_dot_l);
+
+                let p = d * h_dot_n.abs();
+                specular += &(c * r_s * n_dot_l / p);
             }
 
             let specular = specular / settings.rays_per_hit as f32 * hit.bsdf.metallic;
-            let diffuse = hit.bsdf.base_color.0.clone() * (1.0 - hit.bsdf.metallic) / PI;
+            let diffuse = hit.bsdf.base_color.0.clone() * (1.0 - hit.bsdf.metallic) / PI * &(diffuse / settings.rays_per_hit as f32);
 
-            return color::Color(specular + &diffuse);
+            return color::Color(specular + &diffuse + &(hit.bsdf.emission.color.0.clone() * hit.bsdf.emission.strength));
         }
 
         let a = 0.5 * (ray.direction()[1] + 1.0);
