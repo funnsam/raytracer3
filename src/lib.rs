@@ -107,12 +107,11 @@ impl Scene<'_> {
             let n_dot_v = hit.normal.dot(&v);
             let alpha = (hit.bsdf.roughness * hit.bsdf.roughness).max(0.01);
             let f0_sqrt = (hit.bsdf.ior - 1.0) / (hit.bsdf.ior + 1.0);
-            let f0 = f0_sqrt * f0_sqrt;
+            let f0 = hit.bsdf.base_color.0.clone() * hit.bsdf.metallic + (f0_sqrt * f0_sqrt) * (1.0 - hit.bsdf.metallic);
 
             let mut specular = Vector::new_zeroed();
-            let mut diffuse = Vector::new_zeroed();
-
-            for _ in 0..settings.rays_per_hit {
+            let mut ks = Vector::new_zeroed();
+            for _ in 0..settings.rays_per_specular * (hit.bsdf.metallic > 0.0) as usize {
                 let xi = fastrand::f32();
                 let theta = ((alpha * xi.sqrt()) / (1.0 - xi).sqrt()).atan();
                 let phi = 2.0 * PI * fastrand::f32();
@@ -137,20 +136,31 @@ impl Scene<'_> {
                 let g1 = |x_dot_n: f32| 2.0 / (1.0 + (1.0 + alpha * alpha * ((1.0 * x_dot_n * x_dot_n) / (x_dot_n * x_dot_n))).sqrt());
                 let g = g1(n_dot_v) * g1(n_dot_l);
 
-                let f = f0 + (1.0 - f0) * (1.0 - v_dot_h).powi(5);
+                let f = f0.clone() + &((-f0.clone() + 1.0) * (1.0 - v_dot_h).powi(5));
+                ks += &f;
 
-                let r_s = (d * g * f) / (4.0 * n_dot_l * n_dot_v).max(0.001);
+                let r_s = (f * d * g) / (4.0 * n_dot_l * n_dot_v).max(0.001);
 
                 let ray = ray::Ray::new_normalized(l, origin.clone());
                 let c = self.ray_color(settings, &ray, depth - 1).0;
-                diffuse += &(c.clone() * n_dot_l);
-
                 let p = d * h_dot_n.abs();
-                specular += &(c * r_s * n_dot_l / p);
+                specular += &(c * &r_s * n_dot_l / p);
             }
 
-            let specular = specular / settings.rays_per_hit as f32 * hit.bsdf.metallic;
-            let diffuse = hit.bsdf.base_color.0.clone() * (1.0 - hit.bsdf.metallic) / PI * &(diffuse / settings.rays_per_hit as f32);
+            ks = (ks / settings.rays_per_specular as f32).map_each(|e| *e = e.max(0.0).min(1.0));
+
+            let mut diffuse = Vector::new_zeroed();
+            for _ in 0..settings.rays_per_diffuse * (hit.bsdf.metallic < 1.0) as usize {
+                let l = utils::random_hemisphere_vector(&hit.normal);
+                let n_dot_l = hit.normal.dot(&l);
+                let ray = ray::Ray::new_normalized(l, origin.clone());
+                let c = self.ray_color(settings, &ray, depth - 1).0;
+                diffuse += &(c * n_dot_l);
+            }
+
+            let kd = (-ks + 1.0) * (1.0 - hit.bsdf.metallic);
+            let specular = specular / settings.rays_per_specular as f32;
+            let diffuse = hit.bsdf.base_color.0.clone() * &(diffuse / settings.rays_per_diffuse as f32) * &kd;
 
             return color::Color(specular + &diffuse + &(hit.bsdf.emission.color.0.clone() * hit.bsdf.emission.strength));
         }
@@ -185,7 +195,8 @@ macro_rules! settings {
 }
 
 settings! {
-    pub rays_per_px: usize = 16,
-    pub rays_per_hit: usize = 2,
+    pub rays_per_px: usize = 2,
+    pub rays_per_specular: usize = 2,
+    pub rays_per_diffuse: usize = 2,
     pub depth: usize = 8,
 }

@@ -95,7 +95,7 @@ fn main() {
                 ],
             },
         },
-        settings: Settings::default().rays_per_px(2).depth(8).rays_per_hit(2),//.rays_per_px(32),
+        settings: Settings::default(),
     };
 
     let path = std::path::Path::new("image.png");
