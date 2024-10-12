@@ -8,7 +8,12 @@ pub struct Bsdf {
     pub ior: f32,
     // pub alpha: f32,
 
+    pub transmission: Transmission,
     pub emission: Emission,
+}
+
+pub struct Transmission {
+    pub weight: f32,
 }
 
 pub struct Emission {
