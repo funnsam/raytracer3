@@ -100,24 +100,12 @@ impl Scene<'_> {
 
             let origin = ray.at(hit.distance);
 
-            /* let lambertian_direction = utils::random_unit_vector() + &h.normal;
-            let lambertian_direction = if lambertian_direction.inner.iter().flatten().any(|c| c.abs() > 1e-6) {
-                lambertian_direction
-            } else {
-                h.normal.clone()
-            };
-
-            let dot = ray.direction().dot(&h.normal);
-            let metallic_direction = ray.direction().clone() - &(h.normal.clone() * 2.0 * dot);
-
-            let direction = lambertian_direction * (1.0 - h.bsdf.metallic) + &(metallic_direction * h.bsdf.metallic); */
-
             // https://graphicscompendium.com/gamedev/15-pbr
             use core::f32::consts::PI;
 
             let n_dot_v = hit.normal.dot(ray.direction());
-            let alpha = hit.bsdf.roughness * hit.bsdf.roughness;
-            let mut color = Vector::new_zeroed();
+            let alpha = (hit.bsdf.roughness * hit.bsdf.roughness).max(0.01);
+            let mut specular = Vector::new_zeroed();
 
             for _ in 0..settings.rays_per_hit {
                 let l = utils::random_hemisphere_vector(&hit.normal);
@@ -132,15 +120,16 @@ impl Scene<'_> {
                 let f0 = 0.0; // (hit.bsdf.refraction - 1.0) / (n + 1.0);
                 let f = f0 + (1.0 - f0) * (1.0 - v_dot_h).powi(5);
 
-                let r_s = (d * g * f) / (4.0 * n_dot_l * n_dot_v);
+                let r_s = (d * g * f) / (4.0 * n_dot_l * n_dot_v).max(0.001);
 
                 let ray = ray::Ray::new_normalized(l, origin.clone());
-                color += &(self.ray_color(settings, &ray, depth - 1).0 * r_s);
+                specular += &(self.ray_color(settings, &ray, depth - 1).0 * r_s * n_dot_l);
             }
 
-            // let direction = r_s * hit.bsdf.metallic + (1.0 - hit.bsdf.metallic) * (1.0 / PI);
+            let specular = specular / settings.rays_per_hit as f32 * hit.bsdf.metallic;
+            let diffuse = hit.bsdf.base_color.0.clone() * (1.0 - hit.bsdf.metallic) / PI;
 
-            return color::Color(color / settings.rays_per_hit as f32);
+            return color::Color(specular + &diffuse);
         }
 
         let a = 0.5 * (ray.direction()[1] + 1.0);

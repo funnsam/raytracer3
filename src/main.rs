@@ -2,7 +2,7 @@ use raytracer3::{*, objects::*};
 use smolmatrix::*;
 
 const WIDTH: usize = HEIGHT * 16 / 9;
-const HEIGHT: usize = 240;
+const HEIGHT: usize = 32;
 
 fn main() {
     let sphere_1 = objects::sphere::Sphere {
@@ -74,7 +74,7 @@ fn main() {
                 ],
             },
         },
-        settings: Settings::default(),//.rays_per_px(32),
+        settings: Settings::default().rays_per_px(1).depth(3).rays_per_hit(64),//.rays_per_px(32),
     };
 
     let path = std::path::Path::new("image.png");
