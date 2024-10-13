@@ -123,6 +123,7 @@ impl Scene<'_> {
             let reflect = if hit.bsdf.transmission.weight < 1.0 || cant_reflect {
                 let alpha = (hit.bsdf.roughness * hit.bsdf.roughness).max(0.01);
                 let f0 = hit.bsdf.base_color.0.clone() * hit.bsdf.metallic + f0 * (1.0 - hit.bsdf.metallic);
+                let (x, y) = utils::make_orthonormals(&hit.normal);
 
                 let mut specular = Vector::new_zeroed();
                 let mut ks = Vector::new_zeroed();
@@ -131,14 +132,7 @@ impl Scene<'_> {
                     let theta = ((alpha * xi.sqrt()) / (1.0 - xi).sqrt()).atan();
                     let phi = 2.0 * PI * fastrand::f32();
                     let l = vector!(3 [theta.sin() * phi.cos(), theta.cos(), theta.sin() * phi.sin()]);
-                    let ct = ray.direction().cross(&hit.normal).unit();
-                    let t = ct.cross(&hit.normal);
-                    let m = matrix!(3 x 3
-                        [t[0], hit.normal[0], ct[0]]
-                        [t[1], hit.normal[1], ct[1]]
-                        [t[2], hit.normal[2], ct[2]]
-                    );
-                    let l = &m * &l;
+                    let l = x.clone() * l[0] + &(hit.normal.clone() * l[1]) + &(y.clone() * l[2]);
 
                     let h = (l.clone() + &v).unit();
                     let v_dot_h = v.dot(&h);
@@ -148,7 +142,7 @@ impl Scene<'_> {
                     let sq = alpha / (h_dot_n * h_dot_n * (alpha * alpha - 1.0) + 1.0);
                     let d = FRAC_1_PI * sq * sq;
 
-                    let g1 = |x_dot_n: f32| 2.0 / (1.0 + (1.0 + alpha * alpha * ((1.0 * x_dot_n * x_dot_n) / (x_dot_n * x_dot_n))).sqrt());
+                    let g1 = |x_dot_n: f32| 2.0 / (1.0 + (1.0 + alpha * alpha * ((1.0 - x_dot_n * x_dot_n) / (x_dot_n * x_dot_n))).sqrt());
                     let g = g1(n_dot_v) * g1(n_dot_l);
 
                     let f = f0.clone() + &((-f0.clone() + 1.0) * (1.0 - v_dot_h).powi(5));

@@ -18,33 +18,13 @@ pub fn random_hemisphere_vector(n: &Vector<3>) -> Vector<3> {
     if p.dot(n) > 0.0 { p } else { -p }
 }
 
-pub fn get_basis(normal: &Vector<3>) -> Matrix<3, 3> {
-    let t = 1.0 - normal[2].abs() > 0.0001;
-    let normal = if t {
-        normal.clone()
+pub fn make_orthonormals(n: &Vector<3>) -> (Vector<3>, Vector<3>) {
+    let mut a = if n[0] != n[1] || n[0] != n[2] {
+        vector!(3 [n[2] - n[1], n[0] - n[2], n[1] - n[0]])
     } else {
-        vector!(3 [normal[2], normal[0], normal[1]])
+        vector!(3 [n[2] - n[1], n[0] + n[2], -n[1] - n[0]])
     };
-
-    let tc = vector!(2 [normal[0], normal[1]]);
-    let tc = tc.clone() * &tc;
-    let nz_p1 = normal[2] + 1.0;
-    let tc = vector!(3 [nz_p1 - tc[0], nz_p1 - tc[1], nz_p1]);
-
-    let uu = vector!(3 [tc[0], tc[2], -normal[0]]);
-    let vv = vector!(3 [tc[2], tc[1], -normal[1]]);
-
-    if t {
-        matrix!(3 x 3
-            [uu[0], vv[0], normal[0]]
-            [uu[1], vv[1], normal[1]]
-            [uu[2], vv[2], normal[2]]
-        )
-    } else {
-        matrix!(3 x 3
-            [uu[1], vv[1], normal[1]]
-            [uu[2], vv[2], normal[2]]
-            [uu[0], vv[0], normal[0]]
-        )
-    }
+    a = a.unit();
+    let b = n.cross(&a);
+    (a, b)
 }
