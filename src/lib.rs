@@ -54,10 +54,10 @@ pub struct FramingInfo {
 impl Camera {
     pub fn new(width: usize, height: usize) -> Self {
         Self {
-            center: vector!(3 [-2.0, 2.0, 1.0]),
+            center: vector!(3 [0.0, 0.0, 0.0]),
             look_at: vector!(3 [0.0, 0.0, -1.0]),
             v_up: vector!(3 [0.0, 1.0, 0.0]),
-            v_fov: 20.0_f32.to_radians(),
+            v_fov: 90.0_f32.to_radians(),
 
             width,
             height,
@@ -104,23 +104,25 @@ impl Scene<'_> {
         if let Some(hit) = self.world.hit(&ray, 0.0001..f32::INFINITY) {
             use core::f32::consts::{FRAC_1_PI, PI};
 
+            let v = -ray.direction().clone();
+            let n_dot_v = hit.normal.dot(&v);
+
             let origin = ray.at(hit.distance);
 
             let ior = if hit.front_face { 1.0 / hit.bsdf.ior } else { hit.bsdf.ior };
-            let cos_theta = (-ray.direction().clone()).dot(&hit.normal).min(1.0);
+            let cos_theta = n_dot_v.min(1.0);
             let sin_theta = (1.0 - cos_theta * cos_theta).sqrt();
 
             let f0_sqrt = (ior - 1.0) / (ior + 1.0);
-            let f0 = hit.bsdf.base_color.0.clone() * hit.bsdf.metallic + (f0_sqrt * f0_sqrt) * (1.0 - hit.bsdf.metallic);
+            let f0 = f0_sqrt * f0_sqrt;
 
-            let f_reflectance = f0_sqrt * f0_sqrt + &((1.0 - f0_sqrt * f0_sqrt) * (1.0 - cos_theta).powi(5));
+            let f_reflectance = f0 + (1.0 - f0) * (1.0 - cos_theta).powi(5);
 
             let cant_reflect = ior * sin_theta > 1.0 || f_reflectance > fastrand::f32();
 
             let reflect = if hit.bsdf.transmission.weight < 1.0 || cant_reflect {
-                let v = -ray.direction().clone();
-                let n_dot_v = hit.normal.dot(&v);
                 let alpha = (hit.bsdf.roughness * hit.bsdf.roughness).max(0.01);
+                let f0 = hit.bsdf.base_color.0.clone() * hit.bsdf.metallic + f0 * (1.0 - hit.bsdf.metallic);
 
                 let mut specular = Vector::new_zeroed();
                 let mut ks = Vector::new_zeroed();
@@ -129,12 +131,12 @@ impl Scene<'_> {
                     let theta = ((alpha * xi.sqrt()) / (1.0 - xi).sqrt()).atan();
                     let phi = 2.0 * PI * fastrand::f32();
                     let l = vector!(3 [theta.sin() * phi.cos(), theta.cos(), theta.sin() * phi.sin()]);
-                    let ct = hit.normal.cross(ray.direction()).unit();
-                    let t = hit.normal.cross(&ct).unit();
+                    let ct = ray.direction().cross(&hit.normal).unit();
+                    let t = ct.cross(&hit.normal);
                     let m = matrix!(3 x 3
-                        [ct[0], hit.normal[0], t[0]]
-                        [ct[1], hit.normal[1], t[1]]
-                        [ct[2], hit.normal[2], t[2]]
+                        [t[0], hit.normal[0], ct[0]]
+                        [t[1], hit.normal[1], ct[1]]
+                        [t[2], hit.normal[2], ct[2]]
                     );
                     let l = &m * &l;
 
@@ -197,8 +199,7 @@ impl Scene<'_> {
             } + &(hit.bsdf.emission.color.0.clone() * hit.bsdf.emission.strength));
         }
 
-        let a = 0.5 * (ray.direction()[1] + 1.0);
-        color::Color(vector!(3 [1.0 - 0.5 * a, 1.0 - 0.3 * a, 1.0]))
+        color::Color(vector!(3 [1.0, 0.98, 0.99]) * 0.75)
     }
 }
 

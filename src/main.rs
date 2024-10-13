@@ -2,39 +2,21 @@ use raytracer3::{*, objects::*};
 use smolmatrix::*;
 use rayon::prelude::*;
 
-const WIDTH: usize = HEIGHT * 16 / 9;
+const WIDTH: usize = HEIGHT * 4 / 3;
 const HEIGHT: usize = 480;
 
 fn main() {
     let sphere_1 = objects::sphere::Sphere {
-        center: vector!(3 [-1.0, 0.0, -1.0]),
+        center: vector!(3 [0.5, 0.0, -1.0]),
         radius: 0.5,
         bsdf: &materials::Bsdf {
-            base_color: color::Color(vector!(3 [1.0, 1.0, 1.0])),
-            metallic: 1.0,
-            roughness: 0.0,
-            ior: 1.5,
+            base_color: color::Color(vector!(3 [0.91, 0.91, 0.91])),
+            metallic: 0.97,
+            roughness: 0.12,
+            ior: 0.69,
 
             transmission: materials::Transmission {
-                weight: 1.0,
-            },
-            emission: materials::Emission {
-                color: color::Color(Vector::new_zeroed()),
-                strength: 0.0,
-            },
-        },
-    };
-    let sphere_1_inner = objects::sphere::Sphere {
-        center: vector!(3 [-1.0, 0.0, -1.0]),
-        radius: 0.45,
-        bsdf: &materials::Bsdf {
-            base_color: color::Color(vector!(3 [1.0, 1.0, 1.0])),
-            metallic: 1.0,
-            roughness: 0.0,
-            ior: 1.0 / 1.5,
-
-            transmission: materials::Transmission {
-                weight: 1.0,
+                weight: 0.0,
             },
             emission: materials::Emission {
                 color: color::Color(Vector::new_zeroed()),
@@ -43,46 +25,10 @@ fn main() {
         },
     };
     let sphere_2 = objects::sphere::Sphere {
-        center: vector!(3 [0.0, 0.0, -1.0]),
+        center: vector!(3 [-0.5, 0.0, -1.0]),
         radius: 0.5,
         bsdf: &materials::Bsdf {
-            base_color: color::Color(vector!(3 [0.8, 0.6, 0.2])),
-            metallic: 0.0,
-            roughness: 0.2,
-            ior: 2.0,
-
-            transmission: materials::Transmission {
-                weight: 0.0,
-            },
-            emission: materials::Emission {
-                color: color::Color(Vector::new_zeroed()),
-                strength: 0.0,
-            },
-        },
-    };
-    let sphere_3 = objects::sphere::Sphere {
-        center: vector!(3 [1.0, 0.0, -1.0]),
-        radius: 0.5,
-        bsdf: &materials::Bsdf {
-            base_color: color::Color(vector!(3 [0.8, 0.8, 0.8])),
-            metallic: 0.5,
-            roughness: 0.0,
-            ior: 1.5,
-
-            transmission: materials::Transmission {
-                weight: 0.0,
-            },
-            emission: materials::Emission {
-                color: color::Color(Vector::new_zeroed()),
-                strength: 0.0,
-            },
-        },
-    };
-    let sphere_4 = objects::sphere::Sphere {
-        center: vector!(3 [0.0, 1.0, 1.0]),
-        radius: 0.125,
-        bsdf: &materials::Bsdf {
-            base_color: color::Color(vector!(3 [1.0, 1.0, 1.0])),
+            base_color: color::Color(vector!(3 [0.8, 0.05, 0.0])),
             metallic: 0.0,
             roughness: 0.0,
             ior: 1.0,
@@ -91,8 +37,8 @@ fn main() {
                 weight: 0.0,
             },
             emission: materials::Emission {
-                color: color::Color(vector!(3 [1.0, 1.0, 1.0])),
-                strength: 10.0,
+                color: color::Color(Vector::new_zeroed()),
+                strength: 0.0,
             },
         },
     };
@@ -100,7 +46,7 @@ fn main() {
         origin: vector!(3 [0.0, -0.5, -1.0]),
         normal: vector!(3 [0.0, -1.0, 0.0]),
         bsdf: &materials::Bsdf {
-            base_color: color::Color(vector!(3 [0.2, 0.5, 0.0])),
+            base_color: color::Color(vector!(3 [0.1, 0.4, 0.0])),
             metallic: 0.0,
             roughness: 1.0,
             ior: 2.0,
@@ -121,9 +67,9 @@ fn main() {
             world: list::List {
                 objects: vec![
                     &sphere_1,
-                    &sphere_1_inner,
+                    // &sphere_1_inner,
                     &sphere_2,
-                    &sphere_3,
+                    // &sphere_3,
                     // &sphere_4,
                     &plane,
                 ],
