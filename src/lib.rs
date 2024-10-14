@@ -5,6 +5,7 @@ pub mod objects;
 pub mod materials;
 pub mod ray;
 mod utils;
+mod ggx;
 
 use objects::Object;
 
@@ -102,7 +103,7 @@ impl Scene<'_> {
         }
 
         if let Some(hit) = self.world.hit(&ray, 0.0001..f32::INFINITY) {
-            use core::f32::consts::{FRAC_1_PI, PI};
+            use core::f32::consts::PI;
 
             let v = -ray.direction().clone();
             let n_dot_v = hit.normal.dot(&v);
@@ -139,11 +140,9 @@ impl Scene<'_> {
                     let h_dot_n = h.dot(&hit.normal);
                     let n_dot_l = hit.normal.dot(&l);
 
-                    let sq = alpha / (h_dot_n * h_dot_n * (alpha * alpha - 1.0) + 1.0);
-                    let d = FRAC_1_PI * sq * sq;
-
-                    let g1 = |x_dot_n: f32| 2.0 / (1.0 + (1.0 + alpha * alpha * ((1.0 - x_dot_n * x_dot_n) / (x_dot_n * x_dot_n))).sqrt());
-                    let g = g1(n_dot_v) * g1(n_dot_l);
+                    let d = ggx::d(alpha, h_dot_n);
+                    let g1_n_dot_v = ggx::g1(alpha, n_dot_v);
+                    let g = g1_n_dot_v * ggx::g1(alpha, n_dot_l);
 
                     let f = f0.clone() + &((-f0.clone() + 1.0) * (1.0 - v_dot_h).powi(5));
                     ks += &f;
@@ -152,7 +151,7 @@ impl Scene<'_> {
 
                     let ray = ray::Ray::new_normalized(l, origin.clone());
                     let c = self.ray_color(settings, &ray, depth - 1).0;
-                    let p = d * h_dot_n.abs();
+                    let p = ggx::pdf(d, g1_n_dot_v, n_dot_l);
                     specular += &(c * &r_s * n_dot_l / p);
                 }
 

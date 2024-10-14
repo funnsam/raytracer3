@@ -11,7 +11,7 @@ fn main() {
         radius: 0.5,
         bsdf: &materials::Bsdf {
             base_color: color::Color(vector!(3 [0.91, 0.91, 0.91])),
-            metallic: 0.97,
+            metallic: 1.0,//0.97,
             roughness: 0.12,
             ior: 0.69,
 
