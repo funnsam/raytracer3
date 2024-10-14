@@ -18,13 +18,34 @@ pub fn random_hemisphere_vector(n: &Vector<3>) -> Vector<3> {
     if p.dot(n) > 0.0 { p } else { -p }
 }
 
-pub fn make_orthonormals(n: &Vector<3>) -> (Vector<3>, Vector<3>) {
-    let mut a = if n[0] != n[1] || n[0] != n[2] {
-        vector!(3 [n[2] - n[1], n[0] - n[2], n[1] - n[0]])
+pub fn get_basis(mut nor: Vector<3>) -> Matrix<3, 3> {
+    let t = 1.0 - nor.z().abs() > 0.00001;
+    if !t {
+        nor = vector_swap!(&nor, 2 0 1);
+    }
+
+    let xy = vector!(2 [nor.x(), nor.y()]);
+    let xy = -xy.clone() * &xy + 1.0 + nor.z();
+    let tc = vector!(3 [xy.x(), xy.y(), -nor.x() * nor.y()]) / (1.0 + nor.z());
+    let uu = vector!(3 [tc.x(), tc.z(), -nor.x() ]);
+    let vv = vector!(3 [tc.z(), tc.y(), -nor.y() ]);
+
+    if t {
+        matrix!(3 x 3
+            [uu.x(), vv.x(), nor.x()]
+            [uu.y(), vv.y(), nor.y()]
+            [uu.z(), vv.z(), nor.z()]
+        )
     } else {
-        vector!(3 [n[2] - n[1], n[0] + n[2], -n[1] - n[0]])
-    };
-    a = a.unit();
-    let b = n.cross(&a);
-    (a, b)
+        matrix!(3 x 3
+            [uu.y(), vv.y(), nor.y()]
+            [uu.z(), vv.z(), nor.z()]
+            [uu.x(), vv.x(), nor.x()]
+        )
+    }
+}
+
+pub fn reflect(v: Vector<3>, n: Vector<3>) -> Vector<3> {
+    let ndv = n.dot(&v);
+    v - &(n * 2.0 * ndv)
 }

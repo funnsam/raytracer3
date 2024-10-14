@@ -103,8 +103,6 @@ impl Scene<'_> {
         }
 
         if let Some(hit) = self.world.hit(&ray, 0.0001..f32::INFINITY) {
-            use core::f32::consts::PI;
-
             let v = -ray.direction().clone();
             let n_dot_v = hit.normal.dot(&v);
 
@@ -124,16 +122,16 @@ impl Scene<'_> {
             let reflect = if hit.bsdf.transmission.weight < 1.0 || cant_reflect {
                 let alpha = (hit.bsdf.roughness * hit.bsdf.roughness).max(0.01);
                 let f0 = hit.bsdf.base_color.0.clone() * hit.bsdf.metallic + f0 * (1.0 - hit.bsdf.metallic);
-                let (x, y) = utils::make_orthonormals(&hit.normal);
+                let onb = utils::get_basis(hit.normal.clone());
 
                 let mut specular = Vector::new_zeroed();
                 let mut ks = Vector::new_zeroed();
                 for _ in 0..settings.rays_per_specular * (hit.bsdf.metallic > 0.0) as usize {
-                    let xi = fastrand::f32();
-                    let theta = ((alpha * xi.sqrt()) / (1.0 - xi).sqrt()).atan();
-                    let phi = 2.0 * PI * fastrand::f32();
-                    let l = vector!(3 [theta.sin() * phi.cos(), theta.cos(), theta.sin() * phi.sin()]);
-                    let l = x.clone() * l[0] + &(hit.normal.clone() * l[1]) + &(y.clone() * l[2]);
+                    let vtan = &onb.transpose() * &v;
+                    let mut htan = ggx::sample_vndf(&vtan, alpha);
+                    if vtan.z() <= 0.0 { htan = -htan; }
+                    let ltan = utils::reflect(-vtan, htan);
+                    let l = &onb * &ltan;
 
                     let h = (l.clone() + &v).unit();
                     let v_dot_h = v.dot(&h);
