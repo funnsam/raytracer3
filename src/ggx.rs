@@ -1,7 +1,7 @@
 use smolmatrix::*;
 
-pub fn pdf(d: f32, g1_n_dot_v: f32, n_dot_l: f32) -> f32 {
-    (d * g1_n_dot_v / (4.0 * n_dot_l)).max(0.001)
+pub fn pdf(metallic: f32, d: f32, g1_n_dot_v: f32, n_dot_l: f32) -> f32 {
+    crate::lambertian::pdf(n_dot_l) * (1.0 - metallic) + (d * g1_n_dot_v / (4.0 * n_dot_l)).max(0.001) * metallic
 }
 
 pub fn g1(alpha: f32, x_dot_n: f32) -> f32 {
@@ -18,8 +18,9 @@ pub fn sample_vndf(v_tangent: &Vector<3>, alpha: f32) -> Vector<3> {
     let phi = 2.0 * core::f32::consts::PI * fastrand::f32();
 
     let mut hemisphere = vector!(3 [phi.cos(), phi.sin(), (1.0 - fastrand::f32()) * (1.0 + v_tangent.z()) - v_tangent_stretched.z()]);
-    *hemisphere.x_mut() *= ((1.0 - hemisphere.z() * hemisphere.z()).max(0.0).min(1.0)).sqrt();
-    *hemisphere.y_mut() *= ((1.0 - hemisphere.z() * hemisphere.z()).max(0.0).min(1.0)).sqrt();
+    let coeff = ((1.0 - hemisphere.z() * hemisphere.z()).max(0.0).min(1.0)).sqrt();
+    *hemisphere.x_mut() *= coeff;
+    *hemisphere.y_mut() *= coeff;
     hemisphere += &v_tangent_stretched;
 
     vector!(3 [hemisphere.x() * alpha, hemisphere.y() * alpha, hemisphere.z()]).unit()

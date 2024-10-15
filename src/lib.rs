@@ -4,8 +4,10 @@ pub mod color;
 pub mod objects;
 pub mod materials;
 pub mod ray;
-mod utils;
+
+mod lambertian;
 mod ggx;
+mod utils;
 
 use objects::Object;
 
@@ -149,24 +151,32 @@ impl Scene<'_> {
 
                     let ray = ray::Ray::new_normalized(l, origin.clone());
                     let c = self.ray_color(settings, &ray, depth - 1).0;
-                    let p = ggx::pdf(d, g1_n_dot_v, n_dot_l);
+                    let p = ggx::pdf(hit.bsdf.metallic, d, g1_n_dot_v, n_dot_l);
                     specular += &(c * &r_s * n_dot_l / p);
                 }
 
-                ks = (ks / settings.rays_per_specular as f32).map_each(|e| *e = e.max(0.0).min(1.0));
+                // ks = (ks / settings.rays_per_specular as f32).map_each(|e| *e = e.max(0.0).min(1.0));
 
                 let mut diffuse = Vector::new_zeroed();
                 for _ in 0..settings.rays_per_diffuse * (hit.bsdf.metallic < 1.0) as usize {
-                    let l = utils::random_hemisphere_vector(&hit.normal);
+                    let l = lambertian::sample(&hit.normal);
+                    let h = (l.clone() + &v).unit();
                     let n_dot_l = hit.normal.dot(&l);
+                    let h_dot_n = h.dot(&hit.normal);
+
                     let ray = ray::Ray::new_normalized(l, origin.clone());
                     let c = self.ray_color(settings, &ray, depth - 1).0;
-                    diffuse += &(c * n_dot_l);
+
+                    let d = ggx::d(alpha, h_dot_n);
+                    let g1_n_dot_v = ggx::g1(alpha, n_dot_v);
+                    let p = ggx::pdf(hit.bsdf.metallic, d, g1_n_dot_v, n_dot_l);
+
+                    diffuse += &(c * n_dot_l / p);
                 }
 
-                let kd = (-ks + 1.0) * (1.0 - hit.bsdf.metallic);
+                // let kd = 1.0 - hit.bsdf.metallic;
                 let specular = specular / settings.rays_per_specular as f32;
-                let diffuse = hit.bsdf.base_color.0.clone() * &(diffuse / settings.rays_per_diffuse as f32) * &kd;
+                let diffuse = hit.bsdf.base_color.0.clone() * &(diffuse / settings.rays_per_diffuse as f32);
 
                 specular + &diffuse
             } else {
