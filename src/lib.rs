@@ -123,6 +123,7 @@ impl Scene<'_> {
 
             let reflect = if hit.bsdf.transmission.weight < 1.0 || cant_reflect {
                 let alpha = (hit.bsdf.roughness * hit.bsdf.roughness).max(0.01);
+                let g1_n_dot_v = ggx::g1(alpha, n_dot_v);
                 let f0 = hit.bsdf.base_color.0.clone() * hit.bsdf.metallic + f0 * (1.0 - hit.bsdf.metallic);
                 let onb = utils::get_basis(hit.normal.clone());
 
@@ -141,7 +142,6 @@ impl Scene<'_> {
                     let n_dot_l = hit.normal.dot(&l);
 
                     let d = ggx::d(alpha, h_dot_n);
-                    let g1_n_dot_v = ggx::g1(alpha, n_dot_v);
                     let g = g1_n_dot_v * ggx::g1(alpha, n_dot_l);
 
                     let f = f0.clone() + &((-f0.clone() + 1.0) * (1.0 - v_dot_h).powi(5));
@@ -167,9 +167,9 @@ impl Scene<'_> {
                     let ray = ray::Ray::new_normalized(l, origin.clone());
                     let c = self.ray_color(settings, &ray, depth - 1).0;
 
-                    let d = ggx::d(alpha, h_dot_n);
-                    let g1_n_dot_v = ggx::g1(alpha, n_dot_v);
-                    let p = ggx::pdf(hit.bsdf.metallic, d, g1_n_dot_v, n_dot_l);
+                    // let d = ggx::d(alpha, h_dot_n);
+                    // let p = ggx::pdf(hit.bsdf.metallic, d, g1_n_dot_v, n_dot_l);
+                    let p = lambertian::pdf(n_dot_l);
 
                     diffuse += &(c * n_dot_l / p);
                 }
@@ -178,7 +178,7 @@ impl Scene<'_> {
                 let specular = specular / settings.rays_per_specular as f32;
                 let diffuse = hit.bsdf.base_color.0.clone() * &(diffuse / settings.rays_per_diffuse as f32);
 
-                specular + &diffuse
+                specular * hit.bsdf.metallic + &(diffuse * (1.0 - hit.bsdf.metallic))
             } else {
                 Vector::new_zeroed()
             };
