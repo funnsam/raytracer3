@@ -135,6 +135,7 @@ impl Scene<'_> {
                     if vtan.z() <= 0.0 { htan = -htan; }
                     let ltan = utils::reflect(-vtan, htan);
                     let l = &onb * &ltan;
+                    // specular += &(l.clone() * 0.5 + 0.5);
 
                     let h = (l.clone() + &v).unit();
                     let v_dot_h = v.dot(&h);
@@ -155,7 +156,7 @@ impl Scene<'_> {
                     specular += &(c * &r_s * n_dot_l / p);
                 }
 
-                // ks = (ks / settings.rays_per_specular as f32).map_each(|e| *e = e.max(0.0).min(1.0));
+                ks = (ks / settings.rays_per_specular as f32).map_each(|e| *e = e.max(0.0).min(1.0));
 
                 let mut diffuse = Vector::new_zeroed();
                 for _ in 0..settings.rays_per_diffuse * (hit.bsdf.metallic < 1.0) as usize {
@@ -171,14 +172,16 @@ impl Scene<'_> {
                     // let p = ggx::pdf(hit.bsdf.metallic, d, g1_n_dot_v, n_dot_l);
                     let p = lambertian::pdf(n_dot_l);
 
-                    diffuse += &(c * n_dot_l / p);
+                    diffuse += &(c * n_dot_l * core::f32::consts::FRAC_1_PI / p);
                 }
 
-                // let kd = 1.0 - hit.bsdf.metallic;
+                let kd = (-ks + 1.0) * (1.0 - hit.bsdf.metallic);
                 let specular = specular / settings.rays_per_specular as f32;
-                let diffuse = hit.bsdf.base_color.0.clone() * &(diffuse / settings.rays_per_diffuse as f32);
+                let diffuse = hit.bsdf.base_color.0.clone() * &kd * &(diffuse / settings.rays_per_diffuse as f32);
 
-                specular * hit.bsdf.metallic + &(diffuse * (1.0 - hit.bsdf.metallic))
+                specular * hit.bsdf.metallic + &diffuse// &(diffuse * (1.0 - hit.bsdf.metallic))
+                // diffuse
+                // specular
             } else {
                 Vector::new_zeroed()
             };

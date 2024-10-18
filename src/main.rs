@@ -6,6 +6,24 @@ const WIDTH: usize = HEIGHT * 4 / 3;
 const HEIGHT: usize = 480;
 
 fn main() {
+    let furnace_sphere = objects::sphere::Sphere {
+        center: vector!(3 [0.0, 0.0, -1.0]),
+        radius: 0.5,
+        bsdf: &materials::Bsdf {
+            base_color: color::Color(vector!(3 [0.8, 0.8, 0.8])),
+            metallic: 1.0,
+            roughness: 0.0,
+            ior: 1.0,
+
+            transmission: materials::Transmission {
+                weight: 0.0,
+            },
+            emission: materials::Emission {
+                color: color::Color(Vector::new_zeroed()),
+                strength: 0.0,
+            },
+        },
+    };
     let sphere_1 = objects::sphere::Sphere {
         center: vector!(3 [0.5, 0.0, -1.0]),
         radius: 0.5,
@@ -66,12 +84,10 @@ fn main() {
         scene: Scene {
             world: list::List {
                 objects: vec![
-                    &sphere_1,
-                    // &sphere_1_inner,
+                    /*&sphere_1,
                     &sphere_2,
-                    // &sphere_3,
-                    // &sphere_4,
-                    &plane,
+                    &plane,*/
+                    &furnace_sphere,
                 ],
             },
         },
