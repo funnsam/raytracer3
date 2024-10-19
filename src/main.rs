@@ -10,7 +10,7 @@ fn main() {
         center: vector!(3 [0.0, 0.0, -1.0]),
         radius: 0.5,
         bsdf: &materials::Bsdf {
-            base_color: color::Color(vector!(3 [0.8, 0.8, 0.8])),
+            base_color: color::Color(vector!(3 [1.0, 1.0, 1.0])),
             metallic: 1.0,
             roughness: 0.0,
             ior: 1.0,
