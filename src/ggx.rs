@@ -1,15 +1,15 @@
 use smolmatrix::*;
 
 pub fn pdf(metallic: f32, d: f32, g1_n_dot_v: f32, n_dot_l: f32) -> f32 {
-    crate::lambertian::pdf(n_dot_l) * (1.0 - metallic) + (d * g1_n_dot_v / (4.0 * n_dot_l)).max(0.001) * metallic
+    crate::lambertian::pdf(n_dot_l) * (1.0 - metallic) + (d * g1_n_dot_v / (4.0 * n_dot_l).max(0.001)) * metallic
 }
 
 pub fn g1(alpha: f32, x_dot_n: f32) -> f32 {
-    2.0 / (1.0 + (1.0 + alpha * alpha * ((1.0 - x_dot_n * x_dot_n) / (x_dot_n * x_dot_n))).sqrt())
+    2.0 / (1.0 + (1.0 + alpha * alpha * ((1.0 - x_dot_n * x_dot_n) / (x_dot_n * x_dot_n).max(0.001))).sqrt()).max(0.001)
 }
 
 pub fn d(alpha: f32, h_dot_n: f32) -> f32 {
-    let sq = alpha / (h_dot_n * h_dot_n * (alpha * alpha - 1.0) + 1.0);
+    let sq = alpha / (h_dot_n * h_dot_n * (alpha * alpha - 1.0) + 1.0).max(0.001);
     core::f32::consts::FRAC_1_PI * sq * sq
 }
 
