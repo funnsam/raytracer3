@@ -2,8 +2,8 @@ use raytracer3::{*, objects::*};
 use smolmatrix::*;
 use rayon::prelude::*;
 
-const WIDTH: usize = HEIGHT * 4 / 3;
-const HEIGHT: usize = 480;
+const WIDTH: usize = HEIGHT * 16 / 9;
+const HEIGHT: usize = 1080;
 
 fn main() {
     let furnace_sphere = objects::sphere::Sphere {
